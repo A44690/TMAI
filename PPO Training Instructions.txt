@@ -1,0 +1,8 @@
+PPO Training Instructions:
+1. Install TMInterface
+2. Install all python package listed in requirements
+3. Change the info in "tmai\env\utils\constants.py" to your settings
+4. Run __main__.py
+5. Follow the instructions in terminal (The timestep is recommended to be a multiple of 128)
+6a. After training, the models will be saved to ppo_models as "ppo_model_{timesteps trained}.zip"
+6b. This code have Tensorboard intergration, training info can be checked in "tensorboard\ppo_model_1"

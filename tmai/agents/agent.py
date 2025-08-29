@@ -12,8 +12,7 @@ class Agent(ABC):
 
 class RandomGamepadAgent(Agent):
     def act(self, observation):
-        return np.random.uniform(-1, 1, size=(2,))
-
+        return np.random.uniform([0, 0, -1], [1, 1, 1], size=(3,))
 
 class RandomArrowsAgent(Agent):
     def __init__(self, action_space):
@@ -23,5 +22,6 @@ class RandomArrowsAgent(Agent):
         action = self.action_space.sample()
         action[0] = 1
         action[1] = 0
+        action[2] = 0
 
         return action

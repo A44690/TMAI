@@ -16,8 +16,7 @@ from tmai.env.utils.GameLaunch import GameLauncher
 
 ArrowsActionSpace = MultiBinary((4,))  # none up down right left
 ControllerActionSpace = Box(
-    low=np.array([0.0, -1.0]), high=np.array([1.0, 1.0]), shape=(2,), dtype=np.float32
-)  # gas and steer
+    low=np.array([0.0, 0.0, -1.0]), high=np.array([1.0, 1.0, 1.0]), shape=(3,), dtype=np.float32, seed=42)  # gas and steer
 ActType = TypeVar("ActType")
 ObsType = TypeVar("ObsType")
 
@@ -59,9 +58,10 @@ class TrackmaniaEnv(Env):
         self.total_reward = 0.0
         self.n_steps = 0
         self.max_steps = 1000
-        self.command_frequency = 50
+        self.command_frequency = 5
         self.last_action = None
         self.low_speed_steps = 0
+        self.starting_position = None
 
     def step(self, action):
         self.last_action = action
@@ -69,31 +69,30 @@ class TrackmaniaEnv(Env):
         self.action_to_command(action)
         done = (
             True
-            if self.n_steps >= self.max_steps or self.total_reward < -300
+            if self.n_steps >= self.max_steps or self.total_reward < -500
             else False
         )
+        
         self.total_reward += self.reward
+        print("total reward: ", self.total_reward , "reward: ", self.reward)
+        # print("speed: ", self.state.display_speed, "time: ", self.state.time)
+        # print("obs: ", min(self.obs))
         self.n_steps += 1
-        info = {}
+        info = {"total_reward": self.total_reward, "reward": self.reward, "speed": self.state.display_speed, "time": self.state.time}
         time.sleep(self.command_frequency * 10e-3)
         return self.observation, self.reward, done, info
 
     def reset(self):
-        print("reset")
+        # print("reset")
         self.total_reward = 0.0
         self.n_steps = 0
         self._restart_race()
         self.time = 0
         self.last_action = None
         self.low_speed_steps = 0
-        print("reset done")
-
+        # print("reset done")
+        print("time: ", self.state.time)
         return self.observation
-
-    def render(self, mode="human"):
-        print(f"total reward: {self.total_reward}")
-        print(f"speed: {self.speed}")
-        print(f"time = {self.state.time}")
 
     def action_to_command(self, action):
         if isinstance(self.action_space, MultiBinary):
@@ -102,8 +101,11 @@ class TrackmaniaEnv(Env):
             return self._continuous_action_to_command(action)
 
     def _continuous_action_to_command(self, action):
-        gas, steer = action
+        gas = action[0]  # between 0 and 1
+        brake = action[1]  # between 0 and 1
+        steer = action[2]  # between -1 and 1
         self.input_manager.play_gas(gas)
+        self.input_manager.play_brake(brake)
         self.input_manager.play_steer(steer)
 
     def _discrete_action_to_command(self, action):
@@ -133,37 +135,55 @@ class TrackmaniaEnv(Env):
         return self.state.display_speed
 
     @property
+    def obs(self):
+        return self.viewer.get_obs()
+    
+    @property
     def observation(self):
-        return np.concatenate([self.viewer.get_obs(), [self.speed / 400]])
+        return np.concatenate([self.obs, [self.speed / 600]])
 
     @property
     def reward(self):
-        speed = self.speed
+        self.simthread.update()
+        speed = self.state.display_speed
         if self.state.time < 3000:
             return 0
-
-        speed_reward = speed / 400
-        roll_reward = -abs(self.state.yaw_pitch_roll[2]) / 3.15
-        constant_reward = -0.3
-        gas_reward = self.last_action[0] * 2
-
-        if self.last_action[0] < 0:
-            constant_reward -= 10
+        
+        speed_reward = 0
+        gas_reward = 0
+        roll_reward = -abs(self.state.yaw_pitch_roll[2]) / 3.14
+        constant_reward = -1
+        
+        if speed >= 100:
+            speed_reward = speed / 30 - 10/3
+            gas_reward = self.last_action[0] * 50
+            self.low_speed_steps = 0
+                
+        elif 10 <= speed < 100:
+            speed_reward = 5/90 * speed - 50/9
             gas_reward = 0
-
-        if min(self.observation) < 0.06:
-            constant_reward -= 100
-
-        elif 10 < speed < 100:
-            speed_reward = -1
-            gas_reward = 0
+            self.low_speed_steps = 0
 
         elif speed < 10:
             self.low_speed_steps += 1
             speed_reward = -5 * self.low_speed_steps
             gas_reward = 0
-
+                
+                
+        if self.state.time < 4000:#start situation rewarding to encourage the agent to drive forward at the start
+            if self.last_action[0] > 0:
+                gas_reward = self.last_action[0] * 200
+            if self.last_action[1] > 0 or self.last_action[0] < 0.1:
+                gas_reward -= self.last_action[1] * 500 + 100
+                speed_reward = -5
+            if speed <= 5:
+                speed_reward = -5
         else:
-            self.low_speed_steps = 0
+            if self.last_action[1] > 0:
+                constant_reward -= 10
+                speed_reward = min(0, speed_reward)
+        
+            if min(self.obs) < 0.06:
+                constant_reward -= ((200 * (min(self.obs) - 0.1)) ** 2)
 
         return speed_reward + roll_reward + constant_reward + gas_reward

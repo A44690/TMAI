@@ -73,6 +73,7 @@ class DQN_trainer:
                 action = self.agent.act(observation)
                 action[0] = 1
                 action[1] = 0
+                action[2] = 0#new
                 print(action)
                 observation, reward, done, info = self.env.step(action)
                 transition = Transition(prev_obs, action, observation, reward, done)

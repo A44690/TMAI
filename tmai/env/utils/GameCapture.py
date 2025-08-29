@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import win32.win32gui as wind32
+import matplotlib.pyplot as plt
 from mss import mss
 from tmai.env.utils.constants import GAME_WINDOW_NAME
 
@@ -16,7 +17,7 @@ def getWindowGeometry(name: str) -> tuple:
 
 
 class GameViewer:
-    def __init__(self, n_rays: int = 16) -> None:
+    def __init__(self, n_rays: int = 16):
         self.window_name = GAME_WINDOW_NAME
         self.sct = mss()
         self.n_rays = n_rays
@@ -37,6 +38,10 @@ class GameViewer:
         baw = cv2.resize(baw, (128, 128))
         height = len(baw)
         cut = baw[height // 2 : height // 2 + 32, :]
+        # plt.imshow(cut, cmap="gray")
+        # plt.axis("off")
+        # plt.show()
+        # input("press enter to continue")
         return cut
 
     def show_rays(self, frame):

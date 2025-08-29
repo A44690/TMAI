@@ -166,7 +166,6 @@ class GamepadInputManager:
         """
         value between 0 and 1
         """
-        # print("pressing right trigger")
         self.gamepad.right_trigger_float(value_float=value)
         self.gamepad.update()
 
@@ -174,7 +173,6 @@ class GamepadInputManager:
         """
         value between 0 and 1
         """
-        # print("pressing left trigger")
         self.gamepad.left_trigger_float(value_float=value)
         self.gamepad.update()
 
@@ -182,7 +180,6 @@ class GamepadInputManager:
         """
         presses right shoulder button
         """
-        # print("pressing right shoulder")
         self.gamepad.press_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER)
         self.gamepad.update()
         time.sleep(1.0)
@@ -194,19 +191,23 @@ class GamepadInputManager:
 
     def play_gas(self, value: float):
         """
-        value between -1 and 1
+        value between 0 and 1
         """
-        if value < 0:
-            self.press_right_trigger(0.0)
-            self.press_left_trigger(abs(value))
-        else:
-            self.press_left_trigger(0.0)
-            self.press_right_trigger(value)
+        # print("pressing gas, value:" + str(value))
+        self.press_right_trigger(value)
+        
+    def play_brake(self, value: float):
+        """
+        value between 0 and 1
+        """
+        # print("pressing brake, value:" + str(value))
+        self.press_left_trigger(value)
 
     def play_steer(self, value: float):
         """
         value between -1 and 1
         """
+        # print("steering, value:" + str(value))
         self.move_left_stick_x(value)
 
     def wake_controller(self):
@@ -224,8 +225,8 @@ if __name__ == "__main__":
     gamepad_manager.press_right_shoulder()
     print("setup done")
 
-    while True:
-        time.sleep(0.1)
-        gamepad_manager.play_gas(1.0)
-        time.sleep(0.1)
-        gamepad_manager.play_gas(0.0)
+    # while True:
+    #     time.sleep(0.1)
+    #     gamepad_manager.play_gas(1.0)
+    #     time.sleep(0.1)
+    #     gamepad_manager.play_gas(0.0)
